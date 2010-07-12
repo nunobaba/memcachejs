@@ -24,11 +24,11 @@ Memcache.Connection.prototype.processRequest = function(request) {
 	});
 };
 
-Memcache.Connection.prototype.isBusy = function() {
+Memcache.Connection.prototype.isBusy = function () {
 	return this.request != undefined;
 };
 
-Memcache.Connection.prototype.getTcpConnection = function(callback) {
+Memcache.Connection.prototype.getTcpConnection = function (callback) {
 	if (this.tcpConnection == undefined) {
 		// no connection established? let's start a new one
 		var connection = net.createConnection(this.port, this.host);

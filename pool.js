@@ -2,6 +2,11 @@ var Memcache = {
 	Connection:require('./connection')
 };
 
+Object.prototype.apply = function (values) {
+  for (var k in values) this[k] = values[k];
+  return this;
+};
+
 Memcache.Pool = function(options){
 	// default settings
 	this.apply({

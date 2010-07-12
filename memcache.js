@@ -1,11 +1,8 @@
-// this is for easier combining of objects
-// but it might interfere with other (foreign) code
-// TODO replace with something less obstrusive
-Object.prototype.apply = function(values) {
-	for (var key in values) {
-		this[key] = values[key];
-	}
-	return this;
+var sys = require('sys');
+
+var extend = function (o1, o2) {
+  for (var k in o2) o1[k] = o2[k];
+  return o1;
 };
 
 Memcache = function(host, port){
@@ -44,32 +41,44 @@ Memcache.prototype.getPool = function(){
 	return this.pool;
 };
 
-Memcache.prototype.get = function(key, callback){
-	var request = {
-			command:'get ' + key
-	};
-	if (callback) request.callback = callback;
-	this.processRequest(request);
+/**
+ * Get and group multiple values, apply callback function on parsed Json
+ * @param {cue: Object} contains key or keys, act and err functions
+ */
+Memcache.prototype.get = function (cue) {
+  var _ = this;
+  cue.keys = (cue.key) ? [cue.key] : cue.keys;
+  cue.keys.forEach(function (k) {
+  	var request = {command:'get ' + k};
+    request.callback = function (it) { 
+      if (it.data) cue.act(JSON.parse(it.data));
+      else if (cue.err) cue.err(k, it);
+    };
+	  _.processRequest(request);
+  }); 
 };
 
-Memcache.prototype.set = function(key, value, options){
-	options = {
-		expires:0,
-		flags:0
-	}.apply(options);
-	var request = {
-		command:'set ' + key + ' ' + options.flags + ' ' + options.expires + ' ' + value.length,
-		data:value
-	};
-	if (options.callback) request.callback = options.callback;
-	this.processRequest(request);
+/**
+ * Find multiple keys at once, apply callback function eventually
+ * @param {cue: Object} contains key or keys
+ * @param {options: Object}
+ */
+Memcache.prototype.set = function (payload, options) {
+  options = extend({expires: 0, flags: 0}, options);
+  for (var k in payload) {
+    var v = JSON.stringify(payload[k]);
+    if (v) {
+      var request = { command: ['set', k, options.flags, options.expires, v.length].join(' ')
+                    , data: v
+                    };
+      if (options.callback) request.callback = options.callback;
+      this.processRequest(request);
+    };
+  };
 };
 
 Memcache.prototype.add = function(key, value, options){
-	options = {
-		expires:0,
-		flags:0
-	}.apply(options);
+  options = extend({expires: 0, flags: 0}, options);
 	var request = {
 		command:'add ' + key + ' ' + options.flags + ' ' + options.expires + ' ' + value.length,
 		data:value
@@ -79,7 +88,6 @@ Memcache.prototype.add = function(key, value, options){
 };
 
 Memcache.prototype.append = function(key, value, options){
-	options = {}.apply(options);
 	var request = {
 		command:'append ' + key + ' 0 0 ' + value.length,
 		data:value
@@ -89,7 +97,6 @@ Memcache.prototype.append = function(key, value, options){
 };
 
 Memcache.prototype.prepend = function(key, value, options){
-	options = {}.apply(options);
 	var request = {
 		command:'prepend ' + key + ' 0 0 ' + value.length,
 		data:value
@@ -99,7 +106,6 @@ Memcache.prototype.prepend = function(key, value, options){
 };
 
 Memcache.prototype.del = function(key, options){
-	options = {}.apply(options);
 	var request = {
 		command:'delete ' + key
 	};
@@ -112,3 +118,4 @@ Memcache.prototype.shutdown = function(){
 };
 
 module.exports = Memcache;
+
